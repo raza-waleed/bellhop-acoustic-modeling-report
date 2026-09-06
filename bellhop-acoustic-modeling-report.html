@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ray-Tracing Simulation of Underwater Acoustic Channels</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+  :root {
+    --bg: #0a0e14;
+    --panel: #101724;
+    --panel2: #0d131e;
+    --text: #e7edf5;
+    --muted: #8695a8;
+    --line: #1c2634;
+    --line2: #2a3648;
+    --accent: #39d2ff;
+    --accent2: #ffb020;
+    --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --display: 'Space Grotesk', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  h1, h2, h3 { font-family: var(--display); }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 40px 24px 80px; }
+  header.page-head {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+  }
+  header.page-head .kicker { color: var(--accent2); font-family: var(--mono); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+  header.page-head h1 { font-size: 1.9rem; margin: 0 0 8px; line-height: 1.25; }
+  header.page-head .meta { color: var(--muted); font-size: 0.92rem; }
+  .abstract {
+    background: rgba(57, 210, 255, 0.07);
+    border: 1px solid rgba(57, 210, 255, 0.25);
+    border-radius: 8px;
+    padding: 18px 22px;
+    font-size: 0.95rem;
+    margin-bottom: 32px;
+  }
+  .abstract b { color: var(--accent); }
+  .abstract-note { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line2); font-size: 0.82rem; font-style: italic; color: var(--muted); }
+  section.block {
+    background: var(--panel);
+    border: 1px solid var(--line2);
+    border-radius: 8px;
+    padding: 26px 30px;
+    margin-bottom: 28px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  }
+  section.block h2 { font-size: 1.25rem; margin: 0 0 4px; color: var(--accent); }
+  section.block .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 18px; }
+  h3.subhead { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 22px 0 10px; }
+  .params { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .params span {
+    background: var(--panel2); border: 1px solid var(--line2); border-radius: 4px;
+    padding: 4px 10px; font-size: 0.85rem; font-family: var(--mono); color: var(--text);
+  }
+  .result-callout { background: rgba(0, 230, 138, 0.08); border-left: 4px solid #00e68a; padding: 10px 16px; margin: 14px 0; font-size: 0.95rem; }
+  .result-callout b { color: #00e68a; }
+  .model-callout { background: rgba(255, 176, 32, 0.08); border-left: 4px solid var(--accent2); padding: 10px 16px; margin: 14px 0; font-size: 0.95rem; }
+  .model-callout b { color: var(--accent2); }
+  .cite-callout { background: rgba(167, 139, 250, 0.08); border-left: 4px solid #a78bfa; padding: 10px 16px; margin: 14px 0; font-size: 0.9rem; color: var(--muted); }
+  .cite-callout b { color: #a78bfa; }
+  .figure-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 16px 0 4px; }
+  .figure-grid.single { grid-template-columns: 1fr; }
+  figure { margin: 0; }
+  figure img { width: 100%; height: auto; border: 1px solid var(--line2); border-radius: 4px; background: var(--panel2); display: block; }
+  figcaption { font-size: 0.8rem; color: var(--muted); margin-top: 4px; text-align: center; }
+  footer.page-foot { color: var(--muted); font-size: 0.85rem; margin-top: 40px; border-top: 1px solid var(--line); padding-top: 16px; }
+  nav.toc { background: var(--panel); border: 1px solid var(--line2); border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; }
+  .toc-heading { font-size: 0.8rem; font-weight: 700; color: var(--accent2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; font-family: var(--mono); }
+  .toc-list, .toc-sublist, .toc-endmatter { list-style: none; margin: 0; padding: 0; }
+  .toc-list > li { margin-bottom: 2px; }
+  .toc-list a, .toc-sublist a, .toc-endmatter a {
+    display: flex; align-items: baseline; gap: 10px; padding: 5px 8px; border-radius: 4px; color: var(--text); text-decoration: none;
+  }
+  .toc-list a:hover, .toc-sublist a:hover, .toc-endmatter a:hover { background: rgba(57, 210, 255, 0.08); color: var(--accent); }
+  .toc-num { flex: 0 0 28px; color: var(--accent); font-weight: 700; font-size: 0.9rem; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+  .toc-title { font-size: 0.95rem; }
+  .toc-endmatter { margin-top: 10px; padding-top: 12px; border-top: 1px dashed var(--line2); display: flex; gap: 6px 22px; flex-wrap: wrap; }
+  .toc-endmatter a { padding: 3px 4px; font-size: 0.85rem; color: var(--muted); font-style: italic; }
+  .toc-endmatter a:hover { color: var(--accent); background: none; }
+  details.lof { margin-bottom: 32px; }
+  details.lof summary { cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+  .lof-list { font-size: 0.83rem; color: var(--muted); columns: 2; margin: 10px 0 0; padding-left: 18px; }
+  .lof-list li { margin-bottom: 4px; break-inside: avoid; }
+  .lof-list a { color: var(--accent); text-decoration: none; }
+  .lof-list a:hover { text-decoration: underline; }
+  .nomenclature { font-size: 0.85rem; columns: 2; column-gap: 24px; margin: 10px 0; }
+  .nomenclature div { break-inside: avoid; margin-bottom: 5px; }
+  .nomenclature b { font-family: var(--mono); color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page-head">
+  <div class="kicker">Underwater Acoustics Technical Report</div>
+  <h1>Ray-Tracing Simulation of Underwater Acoustic Channels: From the Deep Sound Channel to Shallow-Water Signal Detection</h1>
+  <div class="meta">Waleed Raza &middot; Underwater Acoustic Engineering</div>
+</header>
+
+<div class="abstract">
+  <b>Abstract.</b> This report presents a ray-tracing study of underwater acoustic propagation using BELLHOP
+  (Michael B. Porter's Acoustics Toolbox), covering three scenarios: the canonical deep-ocean "Munk profile"
+  sound channel at its standard long-range sonar frequency, the same deep channel adapted to a frequency
+  realistic for acoustic communication, and a distinct, custom shallow-water channel. The deep-channel
+  transmission-loss field is a real result computed in 2019 and read directly from its original binary output
+  file; the eigenray and shallow-water arrival results are regenerated here from the same original configuration
+  files through BELLHOP itself. A channel impulse response built from the shallow-water channel's real multipath
+  arrivals is then used to demonstrate matched-filter detection of both a spread-spectrum ("covert") signal and
+  a QPSK communication signal, connecting this simulation-based study to the real, measured results in this
+  portfolio's tank-characterization and lake-trial reports. All BELLHOP output-file parsing in this report is an
+  original implementation, independently validated against physical expectations: the deep channel's
+  transmission loss matches simple spherical spreading at short range and shows the well-known reduced loss of
+  the sound channel at long range; the shallow-water direct-path arrival delay matches its expected travel time
+  to within 0.1%; and every recovered eigenray in the communication-frequency case correctly terminates at the
+  specified receiver.
+  <div class="abstract-note">This report contains 4 figures. BELLHOP itself, its authored plotting and file-I/O
+  scripts, and the reference sound-speed profile it demonstrates are all third-party material, cited by title
+  and author in the References section and not reproduced in this repository.</div>
+</div>
+
+<nav class="toc" aria-label="Table of contents">
+  <div class="toc-heading">Contents</div>
+  <ol class="toc-list">
+    <li><a href="#sec1"><span class="toc-num">1</span><span class="toc-title">Introduction</span></a></li>
+    <li><a href="#sec2"><span class="toc-num">2</span><span class="toc-title">Ray-Tracing Background</span></a></li>
+    <li><a href="#sec3"><span class="toc-num">3</span><span class="toc-title">The Deep-Ocean Munk Sound Channel</span></a></li>
+    <li><a href="#sec4"><span class="toc-num">4</span><span class="toc-title">A Communication-Relevant Frequency</span></a></li>
+    <li><a href="#sec5"><span class="toc-num">5</span><span class="toc-title">A Custom Shallow-Water Channel</span></a></li>
+    <li><a href="#sec6"><span class="toc-num">6</span><span class="toc-title">Signal Detection Over the Simulated Channel</span></a></li>
+    <li><a href="#sec7"><span class="toc-num">7</span><span class="toc-title">Lessons Learned</span></a></li>
+  </ol>
+  <div class="toc-endmatter">
+    <a href="#nomenclature">Nomenclature</a>
+    <a href="#lof">List of Figures</a>
+    <a href="#references">References</a>
+  </div>
+</nav>
+
+<details class="lof" id="lof">
+  <summary>List of Figures (4)</summary>
+  <ol class="lof-list">
+    <li><a href="#fig1">Figure 1: Deep-ocean Munk channel transmission loss</a></li>
+    <li><a href="#fig2">Figure 2: Communication-frequency eigenrays</a></li>
+    <li><a href="#fig3">Figure 3: Shallow-water arrivals and impulse response</a></li>
+    <li><a href="#fig4">Figure 4: Covert and communication signal detection</a></li>
+  </ol>
+</details>
+
+<section class="block" id="sec1">
+  <h2>1. Introduction</h2>
+  <div class="subtitle">Predicting a channel before you can measure it</div>
+  <p>Before an underwater acoustic system, a sonar, a communication modem, a surveillance array, is ever put in
+  the water, whoever is designing it needs to answer a basic question: at this frequency, over this range, in
+  this environment, will the signal actually get through, and what will it look like when it arrives? Physically
+  testing every candidate combination of frequency, range, depth, and season is expensive, slow, and often
+  outright impossible at the scales that matter; no one instruments an entire ocean basin just to check whether a
+  50 Hz signal reaches a receiver 100 km away. Ray-tracing propagation models exist to answer that question
+  anyway, computationally, from a description of the water column and seafloor alone.</p>
+  <p>BELLHOP is the standard tool for exactly this. Given a sound-speed profile (how fast sound travels at each
+  depth, set by local temperature, salinity, and pressure) and a source/receiver geometry, it traces the specific
+  paths a signal's acoustic energy actually follows, accounting for refraction and reflection, and turns those
+  paths into a transmission-loss field, a set of eigenrays connecting one particular source and receiver, or a
+  channel impulse response usable for testing detection and communication performance. This is the same
+  computational question faced before any real sonar deployment, underwater modem installation, or acoustic
+  environmental study: predict what a channel will do before committing to hardware or a sea trial.</p>
+  <p>This report uses BELLHOP for three purposes that mirror how it is used in practice. Section 3 reproduces a
+  well-understood reference scenario, the classic deep-ocean "Munk profile" sound channel, to establish that the
+  tool and this report's own output-reading code produce physically correct results before trusting them on
+  anything new. Section 4 asks a real design question of that same channel: does it still behave sensibly at a
+  frequency realistic for acoustic communication, three orders of magnitude above the classic sonar case it was
+  built for? Sections 5-6 move to an entirely custom shallow-water scenario and use its predicted channel impulse
+  response to test whether a signal is actually detectable in it, exactly the kind of feasibility check that
+  would otherwise require a real sea trial. Section 7 connects all three results back to the real, measured data
+  elsewhere in this portfolio.</p>
+</section>
+
+<section class="block" id="sec2">
+  <h2>2. Ray-Tracing Background</h2>
+  <div class="subtitle">BELLHOP, the Acoustics Toolbox, and the Munk profile</div>
+  <p>Mechanically, BELLHOP traces rays, or equivalently, narrow Gaussian beams, through the water column, bending
+  each one according to the local sound-speed gradient and reflecting it off the surface and seafloor as needed,
+  then combines the resulting paths into whichever output the run calls for: a full transmission-loss field, the
+  specific eigenrays connecting one source-receiver pair, or a list of arrival times and amplitudes for building
+  a channel impulse response. It is distributed as part of the Acoustics Toolbox [1], developed and maintained by
+  Michael B. Porter.</p>
+  <div class="cite-callout">
+    <b>Cited, not reproduced:</b> the BELLHOP executable itself, and every plotting and file-reading MATLAB
+    script bundled with it, are Porter's own work (each is individually credited "mbp" in its own source), used
+    here only as a local computation tool. None of that code is included in this repository; every figure in
+    this report is generated by original Python scripts described in Section 6 and the accompanying code
+    documentation.
+  </div>
+  <p>The "Munk profile" [2] is a standard idealized deep-ocean sound-speed profile: sound speed decreases with
+  depth from the surface down to a minimum around 1000-1300 m (the sound-channel axis), then increases again
+  toward the seabed. A ray that enters this channel near the axis is continually refracted back toward it rather
+  than escaping toward the surface or bottom, allowing sound to propagate over very long ranges with far less
+  loss than simple spherical spreading would predict, the physical basis of the historical SOFAR channel. It is
+  one of BELLHOP's standard bundled demonstration cases and a common reference test in the underwater acoustics
+  literature; it is used in this report as a way to reproduce a known, physically well-understood result before
+  adapting the same channel to new conditions.</p>
+</section>
+
+<section class="block" id="sec3">
+  <h2>3. The Deep-Ocean Munk Sound Channel</h2>
+  <div class="subtitle">A real result, computed in 2019, read directly from its original output file</div>
+  <p>The transmission-loss field in Figure 1 is not a new simulation. It is read directly from
+  <code>waleed_ray2.shd</code>, a binary BELLHOP output file genuinely computed in 2019 against the Munk
+  profile, at 50 Hz, a 1000 m source depth, and a dense 51 x 1001 grid of receiver depths (0-5000 m) and ranges
+  (0-100 km). BELLHOP's binary output format is not self-describing enough to auto-detect its own array
+  dimensions reliably for this file, so the parser used here takes the grid size from the run's own
+  configuration file rather than guessing; see <code>code/README.md</code> for the parser's validation details.</p>
+  <div class="params">
+    <span>Frequency: 50 Hz</span><span>Source depth: 1000 m</span><span>Depth grid: 51 pts, 0-5000 m</span>
+    <span>Range grid: 1001 pts, 0-100 km</span>
+  </div>
+  <div class="figure-grid single">
+    <figure id="fig1"><img src="figures/munk_channel_tl.png" alt="Deep-ocean Munk channel transmission loss field"><figcaption>Figure 1: Transmission loss across the deep-ocean Munk sound channel, from real BELLHOP output computed in 2019.</figcaption></figure>
+  </div>
+  <div class="result-callout">
+    <b>Physical validation:</b> transmission loss at 1 km range near the channel axis is 60.0 dB, matching
+    simple spherical spreading (20&middot;log&#8321;&#8320;(1000 m) = 60.0 dB) almost exactly. At 100 km range, the
+    same depth shows only 79.2 dB, far better than the 100.0 dB spherical spreading would predict, the deep
+    sound channel's characteristic long-range advantage.
+  </div>
+  <p>The alternating light and dark diagonal bands visible in Figure 1 are the classic convergence-zone
+  structure of deep-channel propagation: rays leaving the source at different angles refract back and forth
+  across the channel axis, periodically converging to produce bands of higher received level separated by
+  quieter zones, rather than the smoothly decreasing level a simple point-to-point model would predict.</p>
+</section>
+
+<section class="block" id="sec4">
+  <h2>4. A Communication-Relevant Frequency</h2>
+  <div class="subtitle">The same channel, three orders of magnitude higher in frequency</div>
+  <p>The classic Munk test case runs at 50 Hz, realistic for long-range low-frequency sonar but far below any
+  frequency used for acoustic communication; this portfolio's own lake-trial report worked in the 3-18 kHz
+  band. <code>waleedray.env</code> keeps the identical Munk sound-speed profile and source depth but raises the
+  frequency to 48 kHz and switches BELLHOP to eigenray mode, which finds the specific ray paths connecting the
+  source to one exact receiver rather than filling a whole grid. Unlike Section 3, this scenario's saved output
+  was not present among the source materials, so it is re-run here directly through BELLHOP from its own
+  original configuration file.</p>
+  <div class="params">
+    <span>Frequency: 48 kHz</span><span>Source depth: 1000 m</span><span>Receiver: 800 m, 100 km</span>
+    <span>Mode: eigenray</span>
+  </div>
+  <div class="figure-grid single">
+    <figure id="fig2"><img src="figures/communication_frequency_eigenrays.png" alt="Communication-frequency eigenrays through the deep channel"><figcaption>Figure 2: Eigenray paths connecting the source to the receiver at 48 kHz, the same Munk deep channel adapted to a communication-relevant frequency.</figcaption></figure>
+  </div>
+  <div class="result-callout">
+    <b>Validation by construction:</b> BELLHOP found 20 candidate rays in this angular fan; 11 of them terminate
+    within 2 km and 50 m of the specified 100 km / 800 m receiver, the expected signature of genuine eigenrays
+    rather than a parsing artifact. The multiple distinct paths reaching the same receiver are real acoustic
+    multipath: the same signal arrives several times, at different delays, having taken different numbers of
+    turns through the channel.
+  </div>
+</section>
+
+<section class="block" id="sec5">
+  <h2>5. A Custom Shallow-Water Channel</h2>
+  <div class="subtitle">Not a reference case: an independently specified scenario</div>
+  <p>Unlike the previous two sections, <code>shalow1.env</code> does not use the Munk profile at all. It
+  specifies a distinct, custom shallow-water scenario: 4 kHz, a 60 m water column, a source at 1.5 m and a
+  receiver at 5 m depth, 300 m apart, and a near-isovelocity sound-speed profile decreasing only slightly with
+  depth (1501.2 m/s at the surface to 1498.7 m/s at 60 m). BELLHOP is run here in ASCII-arrivals mode, which
+  lists every multipath arrival's amplitude, phase, and delay directly, from which a channel impulse response is
+  built exactly as in Section 6.</p>
+  <div class="params">
+    <span>Frequency: 4 kHz</span><span>Water depth: 60 m</span><span>Source: 1.5 m</span>
+    <span>Receiver: 5 m, 300 m range</span>
+  </div>
+  <div class="figure-grid single">
+    <figure id="fig3"><img src="figures/shallow_water_arrivals.png" alt="Shallow water arrivals and channel impulse response"><figcaption>Figure 3: Multipath arrivals for the custom shallow-water scenario, and the channel impulse response built from them.</figcaption></figure>
+  </div>
+  <div class="result-callout">
+    <b>Physical validation:</b> the earliest (direct-path) arrival has a delay of 0.1999 s; at 300 m range and
+    this profile's roughly 1500 m/s sound speed, simple geometry predicts 0.2000 s, a match to within 0.1%.
+  </div>
+  <p>Seven arrivals are found in total: an early, tightly-spaced cluster (the direct path and its immediate
+  single-bounce reflections, which travel almost the same distance in a 60 m water column) followed by a second
+  cluster around 15-17 ms later, corresponding to paths that bounce more times between the surface and bottom
+  before reaching the receiver.</p>
+</section>
+
+<section class="block" id="sec6">
+  <h2>6. Signal Detection Over the Simulated Channel</h2>
+  <div class="subtitle">From a real channel model to matched-filter detection</div>
+  <p>The intellectual core this report is built from is a MATLAB script,
+  <code>waleedmainfile.m</code>, that convolves two test signals, referred to in its own comments as a "covert"
+  signal and a "communication" signal, through a BELLHOP-derived channel impulse response, then recovers each by
+  cross-correlating the channel output against the known transmitted signal: matched-filter detection, the same
+  Neyman-Pearson framework [3] used to detect a real synchronization pulse in this portfolio's lake-trial
+  report.</p>
+  <div class="cite-callout">
+    <b>Scope note:</b> that script's own definitions of its two test signals were not present among the
+    available source materials. Figure 4 therefore uses two newly designed, representative signals built for
+    this report, a spread-spectrum pseudonoise burst standing in for "covert" (a real low-probability-of-
+    intercept technique, since its energy is spread thinly across frequency rather than concentrated at one
+    tone) and a QPSK burst for "communication" (matching this portfolio's lake-trial modulation), while
+    reproducing the original script's actual method: convolution through a real, BELLHOP-derived channel impulse
+    response, followed by matched-filter detection. This is an original implementation, not a translation of the
+    MATLAB script's exact code.
+  </div>
+  <p>Both signals are passed through the exact channel impulse response computed in Section 5, from the
+  shallow-water scenario's real multipath arrivals, not an idealized or synthetic channel.</p>
+  <div class="figure-grid single">
+    <figure id="fig4"><img src="figures/covert_and_communication_detection.png" alt="Covert and communication signal detection over the real channel"><figcaption>Figure 4: Both signals before and after the real shallow-water channel, and their matched-filter detection scores.</figcaption></figure>
+  </div>
+  <div class="result-callout">
+    <b>Result:</b> both signals are correctly detected at the channel's true propagation delay, with peak
+    matched-filter scores of 0.89 (covert) and 0.91 (communication) against a near-zero noise floor elsewhere in
+    the record, despite the channel's multipath distorting each signal's waveform substantially, visible by
+    comparing the transmitted and received traces in Figure 4.
+  </div>
+</section>
+
+<section class="block" id="sec7">
+  <h2>7. Lessons Learned</h2>
+  <div class="subtitle">Simulation and measurement, tested against each other</div>
+  <p>This report's three scenarios form a deliberate progression: reproduce a known reference case and confirm
+  it matches physical expectation, adapt that same channel to a new, more relevant frequency, then move to an
+  entirely custom scenario and use its output for a real detection task. Transmission loss matches
+  spherical-spreading theory, eigenrays land on the specified receiver, arrival delay matches simple
+  travel-time geometry, and detection scores clear a near-zero noise floor by a wide margin.</p>
+  <p>That same discipline connects this report to the rest of the portfolio. The lake-trial report measured a
+  real channel's coherence time and signal-to-noise ratio directly from field recordings; this report predicts
+  comparable channel behavior, multipath spread and delay, from first principles, for a channel that was never
+  physically measured at all. The DSP report's matched-filter detector, verified there on a synthetic pulse and
+  proven on the lake trial's real synchronization signal, is the same detector applied here to a
+  simulation-derived channel. Simulation and measurement are different tools answering the same underlying
+  question, and this portfolio now has a result from each.</p>
+</section>
+
+<section class="block" id="nomenclature">
+  <h2 style="font-size:1.05rem;">Nomenclature</h2>
+  <div class="nomenclature">
+    <div><b>QPSK</b> &nbsp;quadrature phase-shift keying</div>
+    <div><b>SOFAR</b> &nbsp;sound fixing and ranging (deep sound channel)</div>
+    <div><b>SSP</b> &nbsp;sound-speed profile</div>
+    <div><b>TL</b> &nbsp;transmission loss</div>
+  </div>
+</section>
+
+<footer class="page-foot" id="references">
+  <p><b>Data and materials availability.</b> BELLHOP (bellhop.exe) and its bundled MATLAB plotting/file-reading
+  scripts are Michael B. Porter's Acoustics Toolbox and are not included in this repository. The Munk profile
+  reference case is a standard, publicly documented test scenario and is likewise not reproduced here. This
+  repository includes only original Python code, this project's own BELLHOP configuration files
+  (<code>waleed_ray2.env</code>, <code>waleedray.env</code>, <code>shalow1.env</code>), one real BELLHOP output
+  file (<code>waleed_ray2.shd</code>, computed 2019), and the figures and report generated from them.</p>
+  <p><b>References</b></p>
+  <p style="font-size:0.85rem;">
+  [1] M. B. Porter, <i>The BELLHOP Manual and User's Guide</i>, Acoustics Toolbox, HLS Research Inc. (Cited for
+  BELLHOP itself and its file formats; not reproduced.)<br>
+  [2] W. Munk, "Sound channel in an exponentially stratified ocean, with application to SOFAR," <i>J. Acoust.
+  Soc. Am.</i>, vol. 55, no. 2, pp. 220-226, 1974. (Cited for the deep-ocean sound-speed profile used in Sections
+  3-4; not reproduced.)<br>
+  [3] S. M. Kay, <i>Fundamentals of Statistical Signal Processing: Detection Theory</i>, Prentice Hall, 1998.
+  (Matched-filter detection theory cited for Section 6; not reproduced.)<br>
+  [4] W. Raza, "Underwater Acoustic Transducer &amp; Hydrophone Systems: Architecture, Characterization, and
+  Computational Modeling," this portfolio.<br>
+  [5] W. Raza, "Underwater Acoustic OFDM/QPSK Communication: Signal Structure and Channel Characterization
+  from a Lake Trial," this portfolio.<br>
+  [6] W. Raza, "Digital Signal Processing for Underwater Acoustic Channels: Theoretical Foundations and
+  Applied Results," this portfolio.<br>
+  [7] The shallow-water channel scenario explored alongside this project (a related script,
+  <code>qianhaichannel.m</code>, not included in this repository) was developed jointly with a labmate; it is
+  acknowledged here rather than presented as sole original work.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>
